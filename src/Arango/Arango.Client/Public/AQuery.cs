@@ -89,15 +89,22 @@ namespace Arango.Client
         {
             return ToList<Dictionary<string, object>>();
         }
-        
-        /// <summary>
-        /// Retrieves result value as list of objects.
-        /// </summary>
-        public AResult<List<T>> ToList<T>()
+
+        public string ToJson()
+        {
+            var response = GetResponse();
+
+            var result = new AResult<string>(response);
+            if (result.StatusCode != 201)
+                throw new Exception("Arango returned: " + result.Error + "," + result.Extra + ", " + result.StatusCode);
+            else return response.Body;
+        }
+         
+        private Response GetResponse()
         {
             var request = new Request(HttpMethod.POST, ApiBaseUri.Cursor, "");
             var bodyDocument = new Dictionary<string, object>();
-            
+
             // required
             bodyDocument.String(ParameterName.Query, _query.ToString());
             // optional
@@ -111,37 +118,51 @@ namespace Arango.Client
             {
                 bodyDocument.Document(ParameterName.BindVars, _bindVars);
             }
-            
+
             // TODO: options parameter
-            
+
             request.Body = JSON.ToJSON(bodyDocument, ASettings.JsonParameters);
             //this.LastRequest = request.Body;            
             var response = _connection.Send(request);
+
+            if (response.StatusCode != 201)
+                throw new Exception("Arango returned: " + response.StatusCode + ": "  + response.Error);
+
+            return response;
             //this.LastResponse = response.Body;
+
+        }
+        /// <summary>
+        /// Retrieves result value as list of objects.
+        /// </summary>
+        public AResult<List<T>> ToList<T>()
+        {
+            var response =  GetResponse();
+
             var result = new AResult<List<T>>(response);
-            
+
             switch (response.StatusCode)
             {
                 case 201:
                     var body = response.ParseBody<Body<List<T>>>();
-                    
+
                     result.Success = (body != null);
-                    
+
                     if (result.Success)
                     {
                         result.Value = new List<T>();
                         result.Value.AddRange(body.Result);
                         result.Extra = new Dictionary<string, object>();
-                        
+
                         CopyExtraBodyFields<List<T>>(body, result.Extra);
-                        
+
                         if (body.HasMore)
                         {
                             var putResult = Put<T>(body.ID);
-                            
+
                             result.Success = putResult.Success;
                             result.StatusCode = putResult.StatusCode;
-                            
+
                             if (putResult.Success)
                             {
                                 result.Value.AddRange(putResult.Value);
@@ -160,12 +181,13 @@ namespace Arango.Client
                     // Arango error
                     break;
             }
-            
+
             _parameters.Clear();
             _bindVars.Clear();
             _query.Clear();
-            
+
             return result;
+
         }
         
         #endregion
