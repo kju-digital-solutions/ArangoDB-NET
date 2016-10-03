@@ -48,7 +48,7 @@ namespace Arango.Client.Protocol
                 return default(T);
             }
 
-            return JSON.ToObject<T>(Body);
+            return JSON.ToObject<T>(Body, ASettings.JsonParameters);
         }
     }
 }
