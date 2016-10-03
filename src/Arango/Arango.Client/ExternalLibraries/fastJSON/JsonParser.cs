@@ -305,7 +305,7 @@ namespace Arango.fastJSON
                 return double.Parse(s, NumberFormatInfo.InvariantInfo);
             }
             long num;
-            return JSON.CreateLong(out num, json, startIndex, index - startIndex);
+            return JSON.CreateLong(json, startIndex, index - startIndex);
         }
 
         private Token LookAhead()
